@@ -32,15 +32,15 @@ import io.silverware.microservices.annotations.Microservice;
 import io.silverware.microservices.annotations.MicroserviceReference;
 
 /**
- * Processes actions from the action message topic and publishes the resulting commands to the commands message topic. The decision is based
- * on business rules implemented in Drools.
+ * Processes actions from the action message topic and publishes the resulting commands to the commands message topic.
+ * The decision is based on business rules implemented in Drools.
  *
  * @author <a href="mailto:marvenec@gmail.com">Martin Večeřa</a>
  */
 @Microservice
 public class DroolsMicroservice {
 
-   private static final Logger log = LogManager.getLogger(DroolsMicroservice.class);
+   private static final Logger LOGGER = LogManager.getLogger(DroolsMicroservice.class);
 
    // KieSession is not thread safe, we need to synchronize calls
    private static Semaphore sync = new Semaphore(1);
@@ -58,7 +58,7 @@ public class DroolsMicroservice {
    private CacheMicroservice cache;
 
    public void processActions(final List<Action> actions) throws InterruptedException {
-      log.info("Firing rules for action {}", actions);
+      LOGGER.info("Firing rules for action {}", actions);
 
       sync.acquire();
 

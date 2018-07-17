@@ -34,18 +34,18 @@ import io.silverware.microservices.annotations.ParamName;
 @Microservice
 public class MobileGatewayMicroservice {
 
-   private static final Logger log = LogManager.getLogger(MobileGatewayMicroservice.class);
+   private static final Logger LOGGER = LogManager.getLogger(MobileGatewayMicroservice.class);
 
    @Inject
    @MicroserviceReference
    private ProducerTemplate producer;
 
    public MobileGatewayMicroservice() {
-      log.info("MobileGatewayMicroservice constructor");
+      LOGGER.info("MobileGatewayMicroservice constructor");
    }
 
    public void mobileAction(@ParamName("button") final String button) {
-      log.info("Mobile phone button {}", button);
+      LOGGER.info("Mobile phone button {}", button);
       producer.sendBody("direct:actions", new MobileButtonAction(button));
    }
 

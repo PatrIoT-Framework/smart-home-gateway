@@ -32,86 +32,156 @@ import com.redhat.patriot.smart_home_gateway.kjar.MediaCenterCommand;
  */
 public class WorkflowRoutes extends RouteBuilder {
 
+   private final String iotHost = System.getProperty("iot.host", "10.40.2.210:8282");
+   private final String mqttHost = System.getProperty("mqtt.host", "10.40.3.60:1883");
+
+   private void configureCommandsRoutes() throws Exception {
+      from("mqtt:inCommands?subscribeTopicName=ih/message/commands" +
+            "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost).unmarshal().serialization()
+            .bean("cacheMicroservice", "processCommand")
+               .choice()
+               .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.AirConditioningCommand'")
+                  .to("direct:ac")
+               .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.DoorCommand'")
+                  .to("direct:door")
+               .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.FireplaceCommand'")
+                  .to("direct:fire")
+               .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.LightCommand'")
+                  .to("direct:led")
+               .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.BatchLightCommand'")
+                  .to("direct:ledBatch")
+               .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.MediaCenterCommand'")
+                  .to("direct:media")
+               .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.UpdateStatusCommand'")
+                  .setBody().simple("${body.updateMessage}")
+                  .to("direct:mobile");
+   }
+
+   private void configureLedsRoutes() throws Exception {
+      from("direct:led").choice()
+            .when().simple("${body.place} == '" + LightCommand.Place.ALL + "'").to("direct:ledAll")
+            .otherwise().to("direct:ledSingle");
+      from("direct:ledSingle").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            //.setHeader(Exchange.HTTP_QUERY, simple("led=${body.place.led}&r=${body.state.r}" +
+            //         "&g=${body.state.g}&b=${body.state.b}"))
+            .setHeader("led", simple("${body.place.led}"))
+            .setHeader("r", simple("${body.state.r}"))
+            .setHeader("g", simple("${body.state.g}"))
+            .setHeader("b", simple("${body.state.b}"))
+            .setBody().constant("").to("jetty:http://" + iotHost + "/led/setrgb");
+      from("direct:ledAll").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .setHeader("r", simple("${body.state.r}"))
+            .setHeader("g", simple("${body.state.g}"))
+            .setHeader("b", simple("${body.state.b}"))
+            .setBody().constant("").to("jetty:http://" + iotHost + "/led/setrgb/all");
+      from("direct:ledBatch").setHeader(Exchange.HTTP_METHOD, constant("POST"))
+            .setBody().simple("${body.batch}").to("jetty:http://" + iotHost + "/led/batch");
+   /*from("direct:led").setHeader(Exchange.HTTP_METHOD, constant("POST")).to("jetty:http://" + iotHost + "/led/batch");
+     from("direct:ledAllOff").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+              .to("jetty:http://" + iotHost + "/led/setrgb/all?r=0&g=0&b=0");
+     from("direct:ledAllRomantic").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+              .setHeader("r", constant("50"))
+              .setHeader("g", constant("10"))
+              .setHeader("b", constant("10"))
+              .to("jetty:http://" + System.getProperty("iot.host", "10.40.2.210:8282") + "/led/setrgb/all");
+     from("direct:ledAllOn").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+              .to("jetty:http://" + iotHost + "/led/setrgb/all?r=100&g=100&b=100");
+     from("direct:ledAllEvening").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+              .to("jetty:http://" + iotHost + "/led/setrgb/all?r=80&g=80&b=50");*/
+   }
+
+   private void configureAcRoutes() throws Exception {
+      from("direct:ac").choice()
+            .when().simple("${body.ac} == '" + AirConditioningCommand.Ac.NORMAL + "'")
+               .to("direct:acOff")
+            .otherwise()
+               .to("direct:acOn");
+
+      from("direct:acOn").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/ac/on");
+      from("direct:acOff").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/ac/off");
+   }
+
+   private void configureFireplaceRoutes() throws Exception {
+      from("direct:fire").choice()
+            .when().simple("${body.fire} == '" + FireplaceCommand.Fire.HEAT + "'")
+               .to("direct:fireOn")
+            .otherwise()
+               .to("direct:fireOff");
+      from("direct:fireOn").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/fireplace/on");
+      from("direct:fireOff").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/fireplace/off");
+   }
+
+   private void configureMediacenterRoutes() throws Exception {
+      from("direct:media").choice()
+            .when().simple("${body.media} == '" + MediaCenterCommand.Media.OFF + "'")
+               .to("direct:tvOff")
+            .when().simple("${body.media} == '" + MediaCenterCommand.Media.NEWS + "'")
+               .to("direct:tvNews")
+            .otherwise()
+               .to("direct:tvRomantic");
+      from("direct:tvRomantic").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/tv/romantic");
+      from("direct:tvNews").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/tv/news");
+      from("direct:tvOff").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/tv/off");
+   }
+
+   private void configureFrontDoorRoutes() throws Exception {
+      from("direct:door").choice()
+            .when().simple("${body.door} == '" + DoorCommand.Door.FRONT + "'")
+               .to("direct:doorFront")
+            .otherwise()
+               .to("direct:doorRear");
+      from("direct:doorFront").choice()
+            .when().simple("${body.openPercentage} == 0")
+               .to("direct:doorClose")
+            .otherwise()
+               .to("direct:doorOpen");
+      from("direct:doorOpen").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/door/open");
+      from("direct:doorClose").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/door/close");
+   }
+
+   private void configureRearDoorRoutes() throws Exception {
+      from("direct:doorRear").choice()
+            .when().simple("${body.openPercentage} == 0")
+               .to("direct:windowClose")
+            .otherwise()
+               .to("direct:windowOpen");
+      from("direct:windowOpen").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/window/open");
+      from("direct:windowClose").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/window/close");
+   }
+
    @Override
    public void configure() throws Exception {
-      final String iotHost = System.getProperty("iot.host", "10.40.2.210:8282");
-      final String mqttHost = System.getProperty("mqtt.host", "10.40.3.60:1883");
-
       // where does the command belong to?
-      from("mqtt:inCommands?subscribeTopicName=ih/message/commands&userName=mqtt&password=mqtt&host=tcp://" + mqttHost).unmarshal().serialization()
-            .bean("cacheMicroservice", "processCommand")
-            .choice()
-            .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.AirConditioningCommand'").to("direct:ac")
-            .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.DoorCommand'").to("direct:door")
-            .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.FireplaceCommand'").to("direct:fire")
-            .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.LightCommand'").to("direct:led")
-            .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.BatchLightCommand'").to("direct:ledBatch")
-            .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.MediaCenterCommand'").to("direct:media")
-            .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.UpdateStatusCommand'").setBody().simple("${body.updateMessage}").to("direct:mobile");
+      configureCommandsRoutes();
 
       // led lights
-      from("direct:led").choice()
-                        .when().simple("${body.place} == '" + LightCommand.Place.ALL + "'").to("direct:ledAll")
-                        .otherwise().to("direct:ledSingle");
-      from("direct:ledSingle").setHeader(Exchange.HTTP_METHOD, constant("GET"))
-                              //.setHeader(Exchange.HTTP_QUERY, simple("led=${body.place.led}&r=${body.state.r}&g=${body.state.g}&b=${body.state.b}"))
-                              .setHeader("led", simple("${body.place.led}"))
-                              .setHeader("r", simple("${body.state.r}"))
-                              .setHeader("g", simple("${body.state.g}"))
-                              .setHeader("b", simple("${body.state.b}"))
-                              .setBody().constant("").to("jetty:http://" + iotHost + "/led/setrgb");
-      from("direct:ledAll").setHeader(Exchange.HTTP_METHOD, constant("GET"))
-                           .setHeader("r", simple("${body.state.r}"))
-                           .setHeader("g", simple("${body.state.g}"))
-                           .setHeader("b", simple("${body.state.b}"))
-                           .setBody().constant("").to("jetty:http://" + iotHost + "/led/setrgb/all");
-      from("direct:ledBatch").setHeader(Exchange.HTTP_METHOD, constant("POST")).setBody().simple("${body.batch}").to("jetty:http://" + iotHost + "/led/batch");
-
-      /*from("direct:led").setHeader(Exchange.HTTP_METHOD, constant("POST")).to("jetty:http://" + iotHost + "/led/batch");
-      from("direct:ledAllOff").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/led/setrgb/all?r=0&g=0&b=0");
-      from("direct:ledAllRomantic").setHeader(Exchange.HTTP_METHOD, constant("GET")).setHeader("r", constant("50")).setHeader("g", constant("10")).setHeader("b", constant("10")).to("jetty:http://" + System.getProperty("iot.host", "10.40.2.210:8282") + "/led/setrgb/all");
-      from("direct:ledAllOn").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/led/setrgb/all?r=100&g=100&b=100");
-      from("direct:ledAllEvening").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/led/setrgb/all?r=80&g=80&b=50");*/
+      configureLedsRoutes();
 
       // air conditioning
-      from("direct:ac").choice()
-                       .when().simple("${body.ac} == '" + AirConditioningCommand.Ac.NORMAL + "'").to("direct:acOff")
-                       .otherwise().to("direct:acOn");
-      from("direct:acOn").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/ac/on");
-      from("direct:acOff").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/ac/off");
+      configureAcRoutes();
 
       // fireplace
-      from("direct:fire").choice()
-                         .when().simple("${body.fire} == '" + FireplaceCommand.Fire.HEAT + "'").to("direct:fireOn")
-                         .otherwise().to("direct:fireOff");
-      from("direct:fireOn").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/fireplace/on");
-      from("direct:fireOff").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/fireplace/off");
+      configureFireplaceRoutes();
 
       // media center
-      from("direct:media").choice()
-            .when().simple("${body.media} == '" + MediaCenterCommand.Media.OFF + "'").to("direct:tvOff")
-            .when().simple("${body.media} == '" + MediaCenterCommand.Media.NEWS + "'").to("direct:tvNews")
-            .otherwise().to("direct:tvRomantic");
-      from("direct:tvRomantic").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/tv/romantic");
-      from("direct:tvNews").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/tv/news");
-      from("direct:tvOff").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/tv/off");
+      configureMediacenterRoutes();
 
       // door, aka front door, aka main entrance
-      from("direct:door").choice()
-            .when().simple("${body.door} == '" + DoorCommand.Door.FRONT + "'").to("direct:doorFront")
-            .otherwise().to("direct:doorRear");
-      from("direct:doorFront").choice()
-            .when().simple("${body.openPercentage} == 0").to("direct:doorClose")
-            .otherwise().to("direct:doorOpen");
-      from("direct:doorOpen").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/door/open");
-      from("direct:doorClose").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/door/close");
+      configureFrontDoorRoutes();
 
       // window, aka rear door
-      from("direct:doorRear").choice()
-            .when().simple("${body.openPercentage} == 0").to("direct:windowClose")
-            .otherwise().to("direct:windowOpen");
-      from("direct:windowOpen").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/window/open");
-      from("direct:windowClose").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/window/close");
+      configureRearDoorRoutes();
 
       // mock routes - uncomment when the intelligent home device is not present
       // from("jetty:http://" + iotHost + "?matchOnUriPrefix=true").log("Called house on url").to("stream:out");

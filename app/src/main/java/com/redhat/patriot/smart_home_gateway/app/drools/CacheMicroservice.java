@@ -40,7 +40,7 @@ import io.silverware.microservices.providers.cdi.builtin.Storage;
 @Microservice
 public class CacheMicroservice {
 
-   private static final Logger log = LogManager.getLogger(CacheMicroservice.class);
+   private static final Logger LOGGER = LogManager.getLogger(CacheMicroservice.class);
 
    private static final String CACHE = CacheMicroservice.class.getPackage().getName() + ".CACHE";
 
@@ -55,7 +55,7 @@ public class CacheMicroservice {
 
    @SuppressWarnings("unchecked")
    public Command processCommand(final Command command) {
-      log.info("Caching command status {}", command);
+      LOGGER.info("Caching command status {}", command);
 
       Map<String, String> cache = (Map<String, String>) storage.get(CACHE);
       Map<String, String> update = command.getCacheUpdate();

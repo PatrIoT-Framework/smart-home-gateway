@@ -15,12 +15,13 @@
  */
 package com.redhat.patriot.smart_home_gateway.app.mqtt;
 
-import org.apache.camel.Exchange;
+//import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 
 /**
- * These routes wire the individual components together. Actions go to actions topic, then to business rules engine (Drools), resulting commands go to the
- * commands queue. Also, Drools can send status updates to the mobile phone. Weather sensor is periodically checked (pull model) and the corresponding actions
+ * These routes wire the individual components together. Actions go to actions topic, then to
+ * business rules engine (Drools), resulting commands go to the commands queue. Also, Drools can send status updates to
+ * the mobile phone. Weather sensor is periodically checked (pull model) and the corresponding actions
  * are placed in the actions topic.
  *
  * @author <a href="mailto:marvenec@gmail.com">Martin Večeřa</a>
@@ -37,13 +38,19 @@ public class IntegrationRoutes extends RouteBuilder {
       // First, we need to start consumers from "direct" to avoid warnings while Camel processes exchange
 
       // creates a new action
-      from("direct:actions").marshal().serialization().to("mqtt:outActions?publishTopicName=ih/message/actions&userName=mqtt&password=mqtt&host=tcp://" + mqttHost);
+      from("direct:actions").marshal().serialization()
+               .to("mqtt:outActions?publishTopicName=ih/message/actions" +
+                        "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost);
 
       // creates a new command
-      from("direct:commands").marshal().serialization().to("mqtt:outCommands?publishTopicName=ih/message/commands&userName=mqtt&password=mqtt&host=tcp://" + mqttHost);
+      from("direct:commands").marshal().serialization()
+               .to("mqtt:outCommands?publishTopicName=ih/message/commands" +
+                        "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost);
 
       // sends an update message to the mobile phone
-      from("direct:mobile").to("mqtt:outMobile?publishTopicName=ih/message/mobile&userName=mqtt&password=mqtt&host=tcp://" + mqttHost);
+      from("direct:mobile")
+               .to("mqtt:outMobile?publishTopicName=ih/message/mobile" +
+                        "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost);
 
       // process weather
       from("direct:weather").bean("weatherMicroservice", "processWeather");
@@ -52,24 +59,33 @@ public class IntegrationRoutes extends RouteBuilder {
       from("direct:rfid").bean("weatherMicroservice", "processRfid");
 
       // expose REST API for the mobile phone to be able to send actions
-      from("jetty:http://" + mobileHost + "/mobile").setBody().simple("${in.header.button}").bean("mobileGatewayMicroservice", "mobileAction");
+      from("jetty:http://" + mobileHost + "/mobile").setBody().simple("${in.header.button}")
+               .bean("mobileGatewayMicroservice", "mobileAction");
 
       // periodically check Intelligent Home's REST interface to obtain weather status, process the status as an action
-      //from("timer://foo?period=5000").setHeader(Exchange.HTTP_METHOD, constant("GET")).to("jetty:http://" + iotHost + "/sensorData").to("direct:weather");
+//      from("timer://foo?period=5000").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+//               .to("jetty:http://" + iotHost + "/sensorData").to("direct:weather");
       // comment out the previous route and enable the following one for debugging purposes
-      // from("timer://foo?period=5000").setBody().constant("{ \"temperature\" : 23, \"humidity\" : 42, ").to("direct:weather");
+//       from("timer://foo?period=5000").setBody().constant("{ \"temperature\" : 23, \"humidity\" : 42, ")
+//                .to("direct:weather");
 
       // Append the following to the previous route to get debug output
       //      .setBody().simple("Weather: ${body}").to("stream:out");
 
       // process actions in Drools
-      from("mqtt:inActions?subscribeTopicName=ih/message/actions&userName=mqtt&password=mqtt&host=tcp://" + mqttHost).unmarshal().serialization().bean("droolsMicroservice", "processAction");
+      from("mqtt:inActions?subscribeTopicName=ih/message/actions" +
+               "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost).unmarshal().serialization()
+                     .bean("droolsMicroservice", "processAction");
 
       // read weather from a topic deployed in the home
-      from("mqtt:inWeather?subscribeTopicName=ih/message/weather&userName=mqtt&password=mqtt&host=tcp://" + iotMqttHost).to("direct:weather");
+      from("mqtt:inWeather?subscribeTopicName=ih/message/weather" +
+               "&userName=mqtt&password=mqtt&host=tcp://" + iotMqttHost)
+                     .to("direct:weather");
 
       // read RFID tags from a topic deployed in the home
-      from("mqtt:inRfid?subscribeTopicName=ih/message/rfidTags&userName=mqtt&password=mqtt&host=tcp://" + iotMqttHost).to("direct:rfid");
+      from("mqtt:inRfid?subscribeTopicName=ih/message/rfidTags" +
+               "&userName=mqtt&password=mqtt&host=tcp://" + iotMqttHost)
+                     .to("direct:rfid");
    }
 
 }

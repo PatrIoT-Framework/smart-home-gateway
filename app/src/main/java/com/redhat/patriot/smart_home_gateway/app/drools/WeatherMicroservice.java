@@ -34,14 +34,14 @@ import io.silverware.microservices.annotations.MicroserviceReference;
 @Microservice
 public class WeatherMicroservice {
 
-   private static final Logger log = LogManager.getLogger(WeatherMicroservice.class);
+   private static final Logger LOGGER = LogManager.getLogger(WeatherMicroservice.class);
 
    @Inject
    @MicroserviceReference
    private ProducerTemplate producer;
 
    public void processWeather(final String status) {
-      log.info("Weather status {}", status);
+      LOGGER.info("Weather status {}", status);
 
       final String tempField = "\"temperature\" : ";
       String tempStr = status.substring(status.indexOf(tempField) + tempField.length());
@@ -57,7 +57,7 @@ public class WeatherMicroservice {
    }
 
    public void processRfid(final String tag) {
-      log.info("RFID tag present {}", tag);
+      LOGGER.info("RFID tag present {}", tag);
 
       producer.sendBody("direct:actions", new RfidAction(tag.substring(1, tag.length() - 1)));
    }

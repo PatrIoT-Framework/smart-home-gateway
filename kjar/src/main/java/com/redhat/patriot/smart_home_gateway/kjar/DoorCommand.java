@@ -78,6 +78,7 @@ public class DoorCommand extends Command {
 
    @Override
    public Map<String, String> getCacheUpdate() {
-      return Collections.singletonMap(this.getClass().getCanonicalName() + "." + door.toString(), String.valueOf(openPercentage));
+      return Collections.singletonMap(
+               this.getClass().getCanonicalName() + "." + door.toString(), String.valueOf(openPercentage));
    }
 }
