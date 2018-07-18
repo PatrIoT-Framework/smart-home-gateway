@@ -33,11 +33,9 @@ import com.redhat.patriot.smart_home_gateway.kjar.MediaCenterCommand;
 public class WorkflowRoutes extends RouteBuilder {
 
    private final String iotHost = System.getProperty("iot.host", "10.40.2.210:8282");
-   private final String mqttHost = System.getProperty("mqtt.host", "10.40.3.60:1883");
 
    private void configureCommandsRoutes() throws Exception {
-      from("mqtt:inCommands?subscribeTopicName=ih/message/commands" +
-            "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost).unmarshal().serialization()
+      from("direct:commands")
             .bean("cacheMicroservice", "processCommand")
                .choice()
                .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.AirConditioningCommand'")
@@ -51,10 +49,10 @@ public class WorkflowRoutes extends RouteBuilder {
                .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.BatchLightCommand'")
                   .to("direct:ledBatch")
                .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.MediaCenterCommand'")
-                  .to("direct:media")
-               .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.UpdateStatusCommand'")
-                  .setBody().simple("${body.updateMessage}")
-                  .to("direct:mobile");
+                  .to("direct:media");
+//               .when().simple("${body} is 'com.redhat.patriot.smart_home_gateway.kjar.UpdateStatusCommand'")
+//                  .setBody().simple("${body.updateMessage}")
+//                  .to("direct:mobile");
    }
 
    private void configureLedsRoutes() throws Exception {

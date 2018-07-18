@@ -34,7 +34,7 @@
       </dependency>
       <dependency>
          <groupId>org.apache.camel</groupId>
-         <artifactId>camel-mqtt</artifactId>
+         <artifactId>camel-ahc-ws</artifactId>
       </dependency>
       <dependency>
          <groupId>org.apache.camel</groupId>

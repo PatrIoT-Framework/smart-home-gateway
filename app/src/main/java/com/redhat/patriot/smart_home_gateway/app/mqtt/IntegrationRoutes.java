@@ -31,26 +31,15 @@ public class IntegrationRoutes extends RouteBuilder {
    @Override
    public void configure() throws Exception {
       final String iotHost = System.getProperty("iot.host", "10.40.2.210:8282");
-      final String iotMqttHost = System.getProperty("iot.mqtt.host", "10.40.2.210:1883");
-      final String mqttHost = System.getProperty("mqtt.host", "10.40.3.60:1883");
+      final String iotWSHost = System.getProperty("iot.ws.host", "10.40.2.210:9292");
       final String mobileHost = System.getProperty("mobile.host", "0.0.0.0:8283");
 
       // First, we need to start consumers from "direct" to avoid warnings while Camel processes exchange
 
-      // creates a new action
-      from("direct:actions").marshal().serialization()
-               .to("mqtt:outActions?publishTopicName=ih/message/actions" +
-                        "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost);
-
-      // creates a new command
-      from("direct:commands").marshal().serialization()
-               .to("mqtt:outCommands?publishTopicName=ih/message/commands" +
-                        "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost);
-
       // sends an update message to the mobile phone
-      from("direct:mobile")
-               .to("mqtt:outMobile?publishTopicName=ih/message/mobile" +
-                        "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost);
+//      from("direct:mobile")
+//               .to("mqtt:outMobile?publishTopicName=ih/message/mobile" +
+//                        "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost);
 
       // process weather
       from("direct:weather").bean("weatherMicroservice", "processWeather");
@@ -73,19 +62,16 @@ public class IntegrationRoutes extends RouteBuilder {
       //      .setBody().simple("Weather: ${body}").to("stream:out");
 
       // process actions in Drools
-      from("mqtt:inActions?subscribeTopicName=ih/message/actions" +
-               "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost).unmarshal().serialization()
-                     .bean("droolsMicroservice", "processAction");
+      from("direct:actions")
+            .bean("droolsMicroservice", "processAction");
 
       // read weather from a topic deployed in the home
-      from("mqtt:inWeather?subscribeTopicName=ih/message/weather" +
-               "&userName=mqtt&password=mqtt&host=tcp://" + iotMqttHost)
-                     .to("direct:weather");
+      from("ahc-ws://" + iotWSHost + "/weather")
+            .to("direct:weather");
 
       // read RFID tags from a topic deployed in the home
-      from("mqtt:inRfid?subscribeTopicName=ih/message/rfidTags" +
-               "&userName=mqtt&password=mqtt&host=tcp://" + iotMqttHost)
-                     .to("direct:rfid");
+      from("ahc-ws://" + iotWSHost + "/rfidTags")
+            .to("direct:rfid");
    }
 
 }
