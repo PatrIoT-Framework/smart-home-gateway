@@ -1,0 +1,318 @@
+package io.silverware.demos.devconf.kjar
+
+import java.lang.String;
+import java.util.Map;
+import io.silverware.demos.devconf.kjar.*;
+
+import org.apache.camel.ProducerTemplate;
+
+global org.apache.camel.ProducerTemplate producer;
+global java.util.Map cache;
+
+declare MoodAction
+  @expires( 2m )
+  @role( event )
+end
+
+declare MobileButtonAction
+  @expires( 2m )
+  @role( event )
+end
+
+declare WeatherAction
+  @expires( 2m )
+  @role( event )
+end
+
+declare RfidAction
+  @expires( 2m )
+  @role( event )
+end
+
+rule "Weather action"
+when
+   $weather: WeatherAction() from entry-point "actions"
+then
+   System.out.println("Processing weather information");
+   channels["commands"].send(new UpdateStatusCommand("action18", 0xeeeeee, $weather.getWeatherString()));
+end
+
+rule "Day mood action"
+when
+   $mood: MoodAction(mood == MoodAction.Mood.DAY) from entry-point "actions"
+then
+   System.out.println("Processing mood day");
+   channels["commands"].send(new LightCommand(LightCommand.Place.ALL, LedState.OFF));
+   channels["commands"].send(new FireplaceCommand(FireplaceCommand.Fire.COLD));
+   channels["commands"].send(new MediaCenterCommand(MediaCenterCommand.Media.OFF));
+end
+
+rule "Evening mood action"
+when
+   $mood: MoodAction(mood == MoodAction.Mood.EVENING) from entry-point "actions"
+then
+   System.out.println("Processing mood evening");
+   channels["commands"].send(new BatchLightCommand(
+      new LightCommand(LightCommand.Place.ALL, LedState.ON),
+      new LightCommand(LightCommand.Place.LIVINGROOM_FIREPLACE, new LedState(10, 10, 10)),
+      new LightCommand(LightCommand.Place.LIVINGROOM_LIBRARY, new LedState(10, 10, 10)),
+      new LightCommand(LightCommand.Place.LIVINGROOM_COUCH, new LedState(10, 10, 10))
+   ));
+   channels["commands"].send(new FireplaceCommand(FireplaceCommand.Fire.HEAT));
+   channels["commands"].send(new MediaCenterCommand(MediaCenterCommand.Media.NEWS));
+end
+
+rule "Sleep mood action"
+when
+   $mood: MoodAction(mood == MoodAction.Mood.SLEEP) from entry-point "actions"
+then
+   System.out.println("Processing mood sleep");
+   channels["commands"].send(new BatchLightCommand(
+      new LightCommand(LightCommand.Place.ALL, LedState.OFF),
+      new LightCommand(LightCommand.Place.BATHROOM_TUB, new LedState(0, 5, 0)),
+      new LightCommand(LightCommand.Place.CORRIDOR, new LedState(0, 5, 0)),
+      new LightCommand(LightCommand.Place.ENTRANCE, new LedState(0, 5, 0))
+   ));
+   channels["commands"].send(new FireplaceCommand(FireplaceCommand.Fire.COLD));
+   channels["commands"].send(new MediaCenterCommand(MediaCenterCommand.Media.OFF));
+   channels["commands"].send(new DoorCommand(DoorCommand.Door.FRONT, 0)); // close
+   channels["commands"].send(new DoorCommand(DoorCommand.Door.REAR, 0)); // close
+end
+
+rule "Romantic mood command"
+when
+   $mood: MoodAction(mood == MoodAction.Mood.ROMANTIC) from entry-point "actions"
+then
+   System.out.println("Processing mood romantic");
+   channels["commands"].send(new LightCommand(LightCommand.Place.ALL, new LedState(50, 10, 10)));
+   channels["commands"].send(new FireplaceCommand(FireplaceCommand.Fire.HEAT));
+   channels["commands"].send(new MediaCenterCommand(MediaCenterCommand.Media.ROMANCE));
+   channels["commands"].send(new DoorCommand(DoorCommand.Door.FRONT, 0)); // close
+   channels["commands"].send(new DoorCommand(DoorCommand.Door.REAR, 0)); // close
+end
+
+rule "Mobile Button 1 - Mood Day"
+when
+   $mobile: MobileButtonAction(id == "1") from entry-point "actions"
+then
+   System.out.println("Mobile button 1");
+   entryPoints["actions"].insert(new MoodAction(MoodAction.Mood.DAY));
+end
+
+rule "Mobile Button 2 - Mood Evening"
+when
+   $mobile: MobileButtonAction(id == "2") from entry-point "actions"
+then
+   System.out.println("Mobile button 2");
+   entryPoints["actions"].insert(new MoodAction(MoodAction.Mood.EVENING));
+end
+
+rule "Mobile Button 3 - Mood Sleep"
+when
+   $mobile: MobileButtonAction(id == "3") from entry-point "actions"
+then
+   System.out.println("Mobile button 3");
+   entryPoints["actions"].insert(new MoodAction(MoodAction.Mood.SLEEP));
+end
+
+rule "Mobile Button 4 - Mood Romantic"
+when
+   $mobile: MobileButtonAction(id == "4") from entry-point "actions"
+then
+   System.out.println("Mobile button 4");
+   entryPoints["actions"].insert(new MoodAction(MoodAction.Mood.ROMANTIC));
+end
+
+rule "Mobile Button 5 - A/C switch"
+when
+   $mobile: MobileButtonAction(id == "5") from entry-point "actions"
+then
+   System.out.println("Mobile button 5");
+   channels["commands"].send(new AirConditioningCommand(AirConditioningCommand.Ac.COOLING));
+end
+
+rule "Mobile Button 6 - A/C switch"
+when
+   $mobile: MobileButtonAction(id == "6") from entry-point "actions"
+then
+   System.out.println("Mobile button 6");
+   channels["commands"].send(new AirConditioningCommand(AirConditioningCommand.Ac.NORMAL));
+end
+
+rule "Mobile Button 7 - Front door"
+when
+   $mobile: MobileButtonAction(id == "7") from entry-point "actions"
+then
+   System.out.println("Mobile button 7");
+   channels["commands"].send(new DoorCommand(DoorCommand.Door.FRONT, 100)); // open
+end
+
+rule "Mobile Button 8 - Front door"
+when
+   $mobile: MobileButtonAction(id == "8") from entry-point "actions"
+then
+   System.out.println("Mobile button 8");
+   channels["commands"].send(new DoorCommand(DoorCommand.Door.FRONT, 0)); // close
+end
+
+rule "Mobile Button 9 - Rear door"
+when
+   $mobile: MobileButtonAction(id == "9") from entry-point "actions"
+then
+   System.out.println("Mobile button 9");
+   channels["commands"].send(new DoorCommand(DoorCommand.Door.REAR, 100)); // open
+end
+
+rule "Mobile Button 10 - Rear door"
+when
+   $mobile: MobileButtonAction(id == "10") from entry-point "actions"
+then
+   System.out.println("Mobile button 10");
+   channels["commands"].send(new DoorCommand(DoorCommand.Door.REAR, 0)); // close
+end
+
+rule "Mobile Button 11 - Bedroom on"
+when
+   $mobile: MobileButtonAction(id == "11") from entry-point "actions"
+then
+   System.out.println("Mobile button 11");
+   channels["commands"].send(new LightCommand(LightCommand.Place.BEDROOM, LedState.ON));
+   channels["commands"].send(new LightCommand(LightCommand.Place.BED_WINDOW, LedState.ON));
+   channels["commands"].send(new LightCommand(LightCommand.Place.BED_WARDROBE, LedState.ON));
+end
+
+rule "Mobile Button 12 - Bedroom off"
+when
+   $mobile: MobileButtonAction(id == "12") from entry-point "actions"
+then
+   System.out.println("Mobile button 12");
+   channels["commands"].send(new LightCommand(LightCommand.Place.BEDROOM, LedState.OFF));
+   channels["commands"].send(new LightCommand(LightCommand.Place.BED_WINDOW, LedState.OFF));
+   channels["commands"].send(new LightCommand(LightCommand.Place.BED_WARDROBE, LedState.OFF));
+end
+
+rule "Mobile Button 13 - Bed 1 On"
+when
+   $mobile: MobileButtonAction(id == "13") from entry-point "actions"
+then
+   System.out.println("Mobile button 13");
+   channels["commands"].send(new LightCommand(LightCommand.Place.BED_WINDOW, LedState.ON));
+end
+
+rule "Mobile Button 14 - Bed 1 Off"
+when
+   $mobile: MobileButtonAction(id == "14") from entry-point "actions"
+then
+   System.out.println("Mobile button 14");
+   channels["commands"].send(new LightCommand(LightCommand.Place.BED_WINDOW, LedState.OFF));
+end
+
+rule "Mobile Button 15 - Bed 2 On"
+when
+   $mobile: MobileButtonAction(id == "15") from entry-point "actions"
+then
+   System.out.println("Mobile button 15");
+   channels["commands"].send(new LightCommand(LightCommand.Place.BED_WARDROBE, LedState.ON));
+end
+
+rule "Mobile Button 16 - Bed 2 Off"
+when
+   $mobile: MobileButtonAction(id == "16") from entry-point "actions"
+then
+   System.out.println("Mobile button 16");
+   channels["commands"].send(new LightCommand(LightCommand.Place.BED_WARDROBE, LedState.OFF));
+end
+
+rule "Mobile Button 17 - Reset"
+when
+   $mobile: MobileButtonAction(id == "17") from entry-point "actions"
+then
+   System.out.println("Mobile button 17");
+   channels["commands"].send(new LightCommand(LightCommand.Place.ALL, LedState.OFF));
+   channels["commands"].send(new FireplaceCommand(FireplaceCommand.Fire.COLD));
+   channels["commands"].send(new AirConditioningCommand(AirConditioningCommand.Ac.NORMAL));
+   channels["commands"].send(new MediaCenterCommand(MediaCenterCommand.Media.OFF));
+   channels["commands"].send(new DoorCommand(DoorCommand.Door.FRONT, 0));
+   channels["commands"].send(new DoorCommand(DoorCommand.Door.REAR, 0));
+end
+
+rule "Red RFID"
+when
+   $rfid: RfidAction(rfid == "D82A6900") from entry-point "actions"
+then
+   System.out.println("RED mode");
+   channels["commands"].send(new LightCommand(LightCommand.Place.ALL, new LedState(100, 0, 0)));
+end
+
+rule "Green RFID"
+salience 1
+when
+   $rfid1: RfidAction(rfid == "C0686400") from entry-point "actions"
+   eval( !("20".equals(cache.get("io.silverware.demos.devconf.kjar.LightCommand.ALL.G"))) )
+then
+   System.out.println("GREEN mode");
+   System.out.println(cache);
+   channels["commands"].send(new LightCommand(LightCommand.Place.ALL, new LedState(0, 100, 0)));
+end
+
+rule "Green Again"
+when
+   $rfid1: RfidAction(rfid == "C0686400") from entry-point "actions"
+   $rfid2: RfidAction(rfid == "C0686400", this after [1s, 30s] $rfid1) from entry-point "actions"
+then
+   System.out.println("GREEN Again");
+   channels["commands"].send(new LightCommand(LightCommand.Place.ALL, new LedState(0, 20, 0)));
+end
+
+rule "Blue RFID"
+when
+   $rfid: RfidAction(rfid == "84B4FEE9") from entry-point "actions"
+then
+   System.out.println("BLUE mode");
+   channels["commands"].send(new LightCommand(LightCommand.Place.ALL, new LedState(0, 0, 100)));
+end
+
+rule "Yellow RFID"
+when
+   $rfid: RfidAction(rfid == "A4348306") from entry-point "actions"
+   eval( !("100".equals(cache.get("io.silverware.demos.devconf.kjar.LightCommand.ALL.R"))) || !("100".equals(cache.get("io.silverware.demos.devconf.kjar.LightCommand.ALL.G"))) || !("0".equals(cache.get("io.silverware.demos.devconf.kjar.LightCommand.ALL.B"))) )
+then
+   System.out.println("YELLOW mode");
+   System.out.println(cache);
+   channels["commands"].send(new LightCommand(LightCommand.Place.ALL, new LedState(100, 100, 0)));
+end
+
+rule "Yellow Off"
+when
+   $rfid: RfidAction(rfid == "A4348306") from entry-point "actions"
+   eval( "100".equals(cache.get("io.silverware.demos.devconf.kjar.LightCommand.ALL.R")) && "100".equals(cache.get("io.silverware.demos.devconf.kjar.LightCommand.ALL.G")) && "0".equals(cache.get("io.silverware.demos.devconf.kjar.LightCommand.ALL.B")) )
+then
+   System.out.println("YELLOW OFF");
+   System.out.println(cache);
+   channels["commands"].send(new LightCommand(LightCommand.Place.ALL, new LedState(0, 0, 0)));
+end
+
+rule "White RFID"
+when
+   $rfid: RfidAction(rfid == "B37D8EF6") from entry-point "actions"
+then
+   System.out.println("WHITE mode");
+   System.out.println(cache);
+   channels["commands"].send(new LightCommand(LightCommand.Place.ALL, LedState.ON));
+end
+
+rule "Dark Blue RFID"
+when
+   $rfid: RfidAction(rfid == "38CF0400") from entry-point "actions"
+then
+   System.out.println("Dark Blue mode");
+   entryPoints["actions"].insert(new MoodAction(MoodAction.Mood.ROMANTIC));
+end
+
+rule "Black RFID"
+when
+   $rfid: RfidAction(rfid == "3E236600") from entry-point "actions"
+then
+   System.out.println("BLACK mode");
+   entryPoints["actions"].insert(new MobileButtonAction("17"));
+end

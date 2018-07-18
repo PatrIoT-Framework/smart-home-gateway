@@ -21,12 +21,12 @@
    <modelVersion>4.0.0</modelVersion>
 
    <groupId>com.redhat.patriot</groupId>
-   <artifactId>project-template</artifactId>
+   <artifactId>smart-home-gateway</artifactId>
    <version>1.0-SNAPSHOT</version>
+   <packaging>pom</packaging>
 
-   <name>Patriots template project</name>
-   <description>This project is the default template, which will be used as starter for any other
-      project
+   <name>Smart home gateway</name>
+   <description> Application which acts as a gateway for smart-home-firmware and implements basic business rules logic. 
    </description>
    <licenses>
       <license>
@@ -111,13 +111,59 @@
    </developers>
 
    <properties>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      <java.level>1.8</java.level>
+
       <org.junit.platform.version>1.2.0</org.junit.platform.version>
       <org.junit.jupiter.version>5.2.0</org.junit.jupiter.version>
       <maven-surefire-plugin.version>2.21.0</maven-surefire-plugin.version>
+
+      <version.silverware>2.0</version.silverware>
+      <version.apache.camel>2.16.1</version.apache.camel>
+      <version.maven.clean>2.5</version.maven.clean>
+      <version.maven.compiler>3.2</version.maven.compiler>
+      <version.maven.exec>1.4.0</version.maven.exec>
+      <version.maven.findbugs>3.0.0</version.maven.findbugs>
+      <version.maven.project.reports>2.7</version.maven.project.reports>
+      <version.maven.jar.plugin>2.4</version.maven.jar.plugin>
+      <version.maven.dependency.plugin>2.8</version.maven.dependency.plugin>
+      <version.fabric8>2.2.0.redhat-079</version.fabric8>
+
+      <version.drools>6.3.0.Final</version.drools>
    </properties>
+   <modules>
+      <module>app</module>
+      <module>kjar</module>
+   </modules>
 
    <build>
+      <pluginManagement>
+         <plugins>
+            <plugin>
+               <groupId>org.kie</groupId>
+               <artifactId>kie-maven-plugin</artifactId>
+               <version>${version.drools}</version>
+            </plugin>
+         </plugins>
+      </pluginManagement>
       <plugins>
+          <plugin>
+               <groupId>org.apache.maven.plugins</groupId>
+               <artifactId>maven-dependency-plugin</artifactId>
+               <version>${version.maven.dependency.plugin}</version>
+               <executions>
+                  <execution>
+                     <id>copy-dependencies</id>
+                     <phase>package</phase>
+                     <goals>
+                        <goal>copy-dependencies</goal>
+                     </goals>
+                     <configuration>
+                        <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                     </configuration>
+                  </execution>
+               </executions>
+            </plugin>
           <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
@@ -164,8 +210,51 @@
                </execution>
            </executions>
          </plugin>
+            <plugin>
+               <groupId>org.apache.maven.plugins</groupId>
+               <artifactId>maven-jar-plugin</artifactId>
+               <version>${version.maven.jar.plugin}</version>
+               <configuration>
+                  <archive>
+                     <manifest>
+                        <addClasspath>true</addClasspath>
+                        <mainClass>io.silverware.microservices.Boot</mainClass>
+                        <classpathPrefix>lib/</classpathPrefix>
+                     </manifest>
+                     <manifestEntries>
+                     </manifestEntries>
+                  </archive>
+               </configuration>
+            </plugin>
       </plugins>
    </build>
+
+   <dependencyManagement>
+      <dependencies>
+         <dependency>
+            <groupId>io.silverware</groupId>
+            <artifactId>microservices-bom</artifactId>
+            <version>${version.silverware}</version>
+            <type>pom</type>
+            <scope>import</scope>
+         </dependency>
+         <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-stream</artifactId>
+            <version>${version.apache.camel}</version>
+         </dependency>
+         <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-mqtt</artifactId>
+            <version>${version.apache.camel}</version>
+         </dependency>
+         <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-jetty</artifactId>
+            <version>${version.apache.camel}</version>
+         </dependency>
+      </dependencies>
+   </dependencyManagement>
 
 
    <dependencies>
