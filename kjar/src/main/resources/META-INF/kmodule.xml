@@ -2,7 +2,7 @@
 <kmodule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://jboss.org/kie/6.0.0/kmodule">
 
-    <kbase name="testKieBase1" default="true" eventProcessingMode="stream" packages="io.silverware.demos.devconf.kjar">
+    <kbase name="testKieBase1" default="true" eventProcessingMode="stream" packages="com.redhat.patriot.smart_home_gateway.kjar">
         <ksession name="testKieSession1" type="stateful" default="true"/>
     </kbase>
 
