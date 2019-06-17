@@ -119,7 +119,7 @@
       <maven-surefire-plugin.version>2.21.0</maven-surefire-plugin.version>
 
       <version.silverware>2.0</version.silverware>
-      <version.apache.camel>2.16.1</version.apache.camel>
+      <version.apache.camel>2.16.3</version.apache.camel>
       <version.maven.clean>2.5</version.maven.clean>
       <version.maven.compiler>3.2</version.maven.compiler>
       <version.maven.exec>1.4.0</version.maven.exec>
@@ -251,6 +251,11 @@
          <dependency>
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-jetty</artifactId>
+            <version>${version.apache.camel}</version>
+         </dependency>
+         <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-ahc-ws</artifactId>
             <version>${version.apache.camel}</version>
          </dependency>
       </dependencies>
