@@ -24,7 +24,7 @@ import java.util.Map;
 public class MediaCenterCommand extends Command {
 
    public enum Media {
-      OFF, ROMANCE, NEWS
+      OFF, ROMANCE, NEWS, COFFEE
    }
 
    private Media media = Media.OFF;

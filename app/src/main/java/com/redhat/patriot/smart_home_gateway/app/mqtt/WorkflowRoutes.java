@@ -15,6 +15,7 @@
  */
 package com.redhat.patriot.smart_home_gateway.app.mqtt;
 
+import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 
@@ -119,12 +120,16 @@ public class WorkflowRoutes extends RouteBuilder {
                .to("direct:tvOff")
             .when().simple("${body.media} == '" + MediaCenterCommand.Media.NEWS + "'")
                .to("direct:tvNews")
+            .when().simple("${body.media} == '" + MediaCenterCommand.Media.COFFEE + "'")
+               .to("direct:tvCoffee")
             .otherwise()
                .to("direct:tvRomantic");
       from("direct:tvRomantic").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
             .to("jetty:http://" + iotHost + "/tv/romantic");
       from("direct:tvNews").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
             .to("jetty:http://" + iotHost + "/tv/news");
+      from("direct:tvCoffee").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
+            .to("jetty:http://" + iotHost + "/tv/coffee");
       from("direct:tvOff").setBody().constant("").setHeader(Exchange.HTTP_METHOD, constant("GET"))
             .to("jetty:http://" + iotHost + "/tv/off");
    }
