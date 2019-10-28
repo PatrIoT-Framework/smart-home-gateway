@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Patriot project
+ * Copyright 2019 Patriot project
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -30,16 +30,11 @@ public class IntegrationRoutes extends RouteBuilder {
 
    @Override
    public void configure() throws Exception {
-      final String iotHost = System.getProperty("iot.host", "10.40.2.210:8282");
-      final String iotWSHost = System.getProperty("iot.ws.host", "10.40.2.210:9292");
+      final String iotHost = System.getProperty("iot.host", "127.0.0.1:8282");
+      final String iotWSHost = System.getProperty("iot.ws.host", "127.0.0.1:9292");
       final String mobileHost = System.getProperty("mobile.host", "0.0.0.0:8283");
 
       // First, we need to start consumers from "direct" to avoid warnings while Camel processes exchange
-
-      // sends an update message to the mobile phone
-//      from("direct:mobile")
-//               .to("mqtt:outMobile?publishTopicName=ih/message/mobile" +
-//                        "&userName=mqtt&password=mqtt&host=tcp://" + mqttHost);
 
       // process weather
       from("direct:weather").bean("weatherMicroservice", "processWeather");
@@ -51,16 +46,6 @@ public class IntegrationRoutes extends RouteBuilder {
       from("jetty:http://" + mobileHost + "/mobile").setBody().simple("${in.header.button}")
                .bean("mobileGatewayMicroservice", "mobileAction");
 
-      // periodically check Intelligent Home's REST interface to obtain weather status, process the status as an action
-//      from("timer://foo?period=5000").setHeader(Exchange.HTTP_METHOD, constant("GET"))
-//               .to("jetty:http://" + iotHost + "/sensorData").to("direct:weather");
-      // comment out the previous route and enable the following one for debugging purposes
-//       from("timer://foo?period=5000").setBody().constant("{ \"temperature\" : 23, \"humidity\" : 42, ")
-//                .to("direct:weather");
-
-      // Append the following to the previous route to get debug output
-      //      .setBody().simple("Weather: ${body}").to("stream:out");
-
       // process actions in Drools
       from("direct:actions")
             .bean("droolsMicroservice", "processAction");
@@ -69,9 +54,6 @@ public class IntegrationRoutes extends RouteBuilder {
       from("ahc-ws://" + iotWSHost + "/weather")
             .to("direct:weather");
 
-      // read RFID tags from a topic deployed in the home
-      from("ahc-ws://" + iotWSHost + "/rfidTags")
-            .to("direct:rfid");
    }
 
 }

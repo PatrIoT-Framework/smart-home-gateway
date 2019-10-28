@@ -1,44 +1,78 @@
-Complex demo to drive Intelligent Home on DevConf 2016
-===
+Smart Gateway for SmartHome
+=====
 
-Prerequisities:
-Install JBoss A-MQ, tested with version 6.2.1.redhat-084.
-Start the broker with `bin/standalone.sh`.
-Add an admin user mqtt/mqtt:
+This project contains Gateway modified to use with 
+Virtual smart home. In order to build this application
+you need:
 
+* Java version 8
+* Maven
+* Docker - for containerized build
+
+## Building and running the app
+
+To build the application execute following command in
+the sources directory
+```bash
+$ mvn clean package
 ```
-JBossA-MQ:karaf@root> amq:create-admin-user
-Please specify a user...
-New user name: mqtt
-Password for mqtt: 
-Verify password for mqtt: 
+
+The command will produce `target` directories.
+```
+.
+|-- app
+|   |-- src
+|   `-- target
+|-- kjar
+|   |-- src
+|   `-- target
+`-- target
+    `-- lib
 ```
 
-Provide the following system properties either by setting the environment or by using -Dpropert=value parameters.
+The executable application is then located in 
+`app/target/smart-home-gateway-app-1.0-SNAPSHOT.jar`
 
-* iot.host - IP address and port of the RPI based services in the home
-* iot.ws.host - IP address and port of the RPi based websocket service in the home that broadcasts messages on the home state, typically same as iot.host but with a different port number (9292)
-* mqtt.host - IP address and port of the A-MQ broker
-* mobile.host - IP address and port to which the internal REST server will be bind, this is the control interface for the mobile application
+## App running
 
-Compile with:
+For successful execution of the Gateway, you need to 
+start the app located in the `app/target` directory.
 
-`mvn package`
+```bash
+java -Diot.host=${SMART_HOME_HOST}:8282 -Diot.ws.host=${SMART_HOME_HOST}:9292 -jar app/target/smart-home-gateway-app-1.0-SNAPSHOT.jar
+```
 
-Run the jar file in app/target. Use the following parameters to fix logging of some components and provide system properties:
+This will start the application and connect it to the running
+instance of Virtual Smart Home.
 
-`java -Diot.host=10.40.1.23:8282 -Diot.ws.host=10.40.1.23:9292 -Dmobile.host=0.0.0.0:8283 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -jar app/target/smart-home-gateway-app-1.0-SNAPSHOT.jar`
+__WARNING__ The application must be stored in the target
+directory, because there are all the dependencies for the
+classpath, if you'd need to move it, please move whole
+`app/target` directory for successful starting.
 
-Overview of the demo
-====
+ ## Build Docker image
+ 
+ In order to build docker image you'll need to at first
+ build tha app and then invoke `docker build` command
+ 
+ ```bash
+$ mvn clean package
+$ docker build . --tag ${IMAGE_TAG} 
+```
 
-This demo covers everything that runs on OpenShift v3 in the following figure.
+Docker will produce the image under your specified tag
+that is ready to be connected to the `PatrIoT` simulated
+environment.
 
-![Demo overview](https://raw.githubusercontent.com/px3/SilverWare-Demos/devel/demos/devconf-2016/gateway/ih-overview.png)
+## Execute docker image
 
-Details of service integration
-====
+In order to execute this docker image you'll need to know
 
-All the components of the gateway are connected as shown in the following figure.
+* The tag you've build the image before
+* IP address of the Virtual Smart Home deployment
 
-![Demo details](https://raw.githubusercontent.com/px3/SilverWare-Demos/devel/demos/devconf-2016/gateway/ih-detail.png)
+The execution will be performed in this manner
+
+```bash
+$ docker run -e IOT_HOST="${IOT_HOST}:8282" -e IOT_WS_HOST="${IOT_HOST}:9292" ${IMAGE_TAG}
+```
