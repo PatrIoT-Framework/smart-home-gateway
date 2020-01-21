@@ -29,7 +29,7 @@ pipeline {
     }
     post {
         always {
-            junit 'target/surefire-reports/*.xml'
+            junit '**/target/surefire-reports/*.xml'
             step([$class: 'TelegramBotPublisher', message: "The project ${JOB_NAME} has failed ${BUILD_URL}", whenAborted: true, whenFailed: true, whenSuccess: true, whenUnstable: true])
         }
     }
